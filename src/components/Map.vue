@@ -12,9 +12,13 @@ import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
+var L = require("leaflet");
+require("leaflet-routing-machine");
+
 export default {
   mounted() {
     this.initializeMap();
+    this.initializeLRM();
   },
   data() {
     return {
@@ -22,6 +26,12 @@ export default {
     };
   },
   methods: {
+    //-122.2646, 37.4956
+    initializeLRM() {
+      L.Routing.control({
+        waypoints: [L.latLng(37.49, -122.2), L.latLng(37.4992, -122.29)]
+      }).addTo(this.map);
+    },
     addCustomMarker(marker) {
       var el = document.createElement("div");
       el.className = "marker";
