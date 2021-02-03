@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div id="map"></div>
+    <div id="myMap"></div>
+    <button id="testButton" @click="addCustomMarker">add test marker</button>
   </div>
 </template>
 
@@ -21,11 +22,36 @@ export default {
     };
   },
   methods: {
+    addCustomMarker() {
+      var el = document.createElement("div");
+      el.className = "marker";
+
+      new mapboxgl.Marker({
+        element: el,
+        anchor: "bottom"
+      })
+        .setLngLat({
+          lng: -122.2646,
+          lat: 37.4956
+        })
+        // .setPopup(
+        //   new mapboxgl.Popup({ offset: 25 }) // add popups
+        //     .setHTML(
+        //       "<h3>" +
+        //         marker.properties.title +
+        //         "</h3><p>" +
+        //         marker.properties.description +
+        //         "</p>"
+        //     )
+        // )
+        .addTo(this.map);
+      console.log("added marker i hope");
+    },
     initializeMap() {
       mapboxgl.accessToken =
         "pk.eyJ1IjoiZHlsYW5jIiwiYSI6Im53UGgtaVEifQ.RJiPqXwEtCLTLl-Vmd1GWQ";
       this.map = new mapboxgl.Map({
-        container: "map", // container id
+        container: "myMap", // container id
         style: "mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
         center: [-122.2646, 37.4956], // starting position [lng, lat]
         zoom: 11 // starting zoom
@@ -47,14 +73,25 @@ export default {
         //   );
         // },
         mapboxgl: mapboxgl,
-        marker: {
-          drqaggable: false,
-          color: "red"
-        }
+        marker: false
       });
       this.map.addControl(geocoder, "top-left");
 
-      geocoder.on("results");
+      geocoder.on("result", () => {
+        var currentPOI = geocoder.lastSelected;
+        console.log("current POI", currentPOI);
+
+        var el = document.createElement("div");
+        el.id = "marker-" + currentPOI.id;
+        el.className = "marker";
+
+        new mapboxgl.Marker(el, currentPOI)
+          .setLngLat({
+            lng: currentPOI.geometry.coordinates[0],
+            lat: currentPOI.geometry.coordinates[1]
+          })
+          .addTo(this.map);
+      });
       //
     }
   }
@@ -62,7 +99,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-#map {
+#testButton {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1;
+}
+
+#myMap {
   position: absolute;
   top: 0;
   bottom: 0;

@@ -9,6 +9,15 @@
 </template>
 
 <style lang="scss">
+.marker {
+  cursor: pointer;
+  height: 36px;
+  width: 36px;
+  background-image: url("../public/marker.png");
+  background-color: rgba(0, 0, 0, 0);
+  background-size: cover;
+}
+
 body {
   margin: 0;
   padding: 0;
