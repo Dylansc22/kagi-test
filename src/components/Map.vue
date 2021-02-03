@@ -1,7 +1,7 @@
 <template>
   <div>
     <div id="myMap"></div>
-    <button id="testButton" @click="addCustomMarker">add test marker</button>
+    <button id="testButton" @click="addWikiData">add test marker</button>
   </div>
 </template>
 
