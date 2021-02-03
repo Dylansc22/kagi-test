@@ -22,30 +22,34 @@ export default {
     };
   },
   methods: {
-    addCustomMarker() {
+    addCustomMarker(marker) {
       var el = document.createElement("div");
       el.className = "marker";
+
+      console.log(marker);
 
       new mapboxgl.Marker({
         element: el,
         anchor: "bottom"
       })
         .setLngLat({
-          lng: -122.2646,
-          lat: 37.4956
+          lng: marker.geometry.coordinates[0],
+          lat: marker.geometry.coordinates[1]
         })
-        // .setPopup(
-        //   new mapboxgl.Popup({ offset: 25 }) // add popups
-        //     .setHTML(
-        //       "<h3>" +
-        //         marker.properties.title +
-        //         "</h3><p>" +
-        //         marker.properties.description +
-        //         "</p>"
-        //     )
-        // )
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25 }) // add popups
+            .setHTML(
+              "<h3>" +
+                marker.text +
+                "</h3><p>" +
+                marker.place_name +
+                "</p>" +
+                "<h6>" +
+                marker.properties.wikidata +
+                "</h6>"
+            )
+        )
         .addTo(this.map);
-      console.log("added marker i hope");
     },
     initializeMap() {
       mapboxgl.accessToken =
@@ -60,37 +64,14 @@ export default {
       //Add geocoder
       const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
-        // types: "poi",
-        // render: function(item) {
-        //   // extract the item's maki icon or use a default
-        //   var maki = item.properties.maki || "marker";
-        //   return (
-        //     "<div class='geocoder-dropdown-item'><img class='geocoder-dropdown-icon' src='https://unpkg.com/@mapbox/maki@6.1.0/icons/" +
-        //     maki +
-        //     "-15.svg'><span class='geocoder-dropdown-text'>" +
-        //     item.text +
-        //     "</span></div>"
-        //   );
-        // },
         mapboxgl: mapboxgl,
         marker: false
       });
       this.map.addControl(geocoder, "top-left");
 
-      geocoder.on("result", () => {
-        var currentPOI = geocoder.lastSelected;
-        console.log("current POI", currentPOI);
-
-        var el = document.createElement("div");
-        el.id = "marker-" + currentPOI.id;
-        el.className = "marker";
-
-        new mapboxgl.Marker(el, currentPOI)
-          .setLngLat({
-            lng: currentPOI.geometry.coordinates[0],
-            lat: currentPOI.geometry.coordinates[1]
-          })
-          .addTo(this.map);
+      geocoder.on("result", e => {
+        console.log(e.result.geometry.coordinates);
+        this.addCustomMarker(e.result);
       });
       //
     }

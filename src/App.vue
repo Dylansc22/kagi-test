@@ -9,6 +9,11 @@
 </template>
 
 <style lang="scss">
+//popup close button has an ugly border/outline after geocoder marker is first clicked (and popup div is focused) and it looks pretty ugly. Removed it.
+.mapboxgl-popup-close-button:focus {
+  outline: none;
+}
+
 .marker {
   cursor: pointer;
   height: 36px;
