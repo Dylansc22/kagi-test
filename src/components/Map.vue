@@ -1,7 +1,7 @@
 <template>
   <div>
     <div id="myMap"></div>
-    <button id="testButton" @click="addWikiData">add test marker</button>
+    <button id="testButton" @click="testerButton"><h4>Run Test</h4></button>
   </div>
 </template>
 
@@ -14,6 +14,7 @@ import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
 var L = require("leaflet");
 require("leaflet-routing-machine");
+const axios = require("axios");
 
 export default {
   mounted() {
@@ -22,21 +23,66 @@ export default {
   },
   data() {
     return {
-      map: null
+      map: null,
+      markerList: [],
+      counter: 0
     };
   },
   methods: {
-    //-122.2646, 37.4956
-    initializeLRM() {
-      L.Routing.control({
-        waypoints: [L.latLng(37.49, -122.2), L.latLng(37.4992, -122.29)]
-      }).addTo(this.map);
+    async testerButton() {
+      let url = "https://www.wikidata.org/wiki/Special:EntityData/";
+      let x = await axios.get(url + "Q74195" + ".json");
+
+      console.log("the promise:");
+      console.log(x.data);
+    },
+    async fetchWikidata(QID) {
+      if (QID) {
+        let url = "https://www.wikidata.org/wiki/Special:EntityData/";
+        try {
+          const response = await axios.get(url + QID + ".json");
+          let wikipediaDescription =
+            response.data.entities[QID].descriptions.en.value;
+          return wikipediaDescription;
+        } catch (error) {
+          console.log(
+            "request failed during axios request of data in addAllWikiInfo... Likely due to a timeout or something up with the Q ID not existing at the wikidata endpoint"
+          );
+          console.log(error);
+        }
+      }
+    },
+    pushMarkerToList(marker) {
+      marker.id = "marker" + this.counter;
+      this.counter = +1;
+      marker.properties.wikiinfo = {};
+      this.markerList.push(marker);
+    },
+    returnTest() {
+      return "puppies from test";
+    },
+    async addAllWikiInfo(marker) {
+      let url = "https://www.wikidata.org/wiki/Special:EntityData/";
+      let term = marker.properties.wikidata;
+      //some geocoder searches will not have a wikidata page
+      if (term) {
+        try {
+          const response = await axios.get(url + term + ".json");
+          marker.properties.wikidata = null;
+          marker.properties.wikidata =
+            response.data.entities[term].descriptions.en.value;
+          return marker.properties.wikidata;
+        } catch (error) {
+          console.log(
+            "request failed during axios request of data in addAllWikiInfo... Likely due to a timeout or something up with the Q ID not existing at the wikidata endpoint"
+          );
+          console.log(error);
+        }
+      }
     },
     addCustomMarker(marker) {
       var el = document.createElement("div");
       el.className = "marker";
-
-      console.log(marker);
 
       new mapboxgl.Marker({
         element: el,
@@ -54,8 +100,11 @@ export default {
                 "</h3><p>" +
                 marker.place_name +
                 "</p>" +
-                "<h6>" +
+                "<h5>" +
                 marker.properties.wikidata +
+                "</h5>" +
+                "<h6>" +
+                marker.properties.wikiinfo +
                 "</h6>"
             )
         )
@@ -79,9 +128,22 @@ export default {
       });
       this.map.addControl(geocoder, "top-left");
 
-      geocoder.on("result", e => {
-        console.log(e.result.geometry.coordinates);
-        this.addCustomMarker(e.result);
+      geocoder.on("result", async e => {
+        let marker = e.result;
+        this.pushMarkerToList(marker);
+        marker.properties.wikiinfo = await this.fetchWikidata(
+          marker.properties.wikidata
+        );
+        this.addCustomMarker(marker);
+
+        //I need a technique to store all the markers onscreen (thus an array of markers)
+        //This is likely not the most memory efficient technique to manage this issue because I am likely saving a lot of excess information about each marker in the array
+        //discussed further here -- https://stackoverflow.com/questions/53037503/get-marker-feature-instance-in-mapbox
+        // this.markerList.push(e.results);
+
+        // console.log("wiki info below");
+        // console.log(e.result.properties.wikiinfo);
+        // console.log(e.properties.wikiinfo)
       });
       //
     }
@@ -92,9 +154,11 @@ export default {
 <style lang="scss" scoped>
 #testButton {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
+  top: 30px;
+  right: 30px;
+  width: 200px;
   z-index: 1;
+  border: solid 2px black;
 }
 
 #myMap {
