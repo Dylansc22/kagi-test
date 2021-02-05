@@ -1,7 +1,7 @@
 <template>
   <div>
     <div id="myMap"></div>
-    <button id="testButton" @click="testerButton"><h4>Run Test</h4></button>
+    <!-- <button id="testButton" @click="testerButton"><h4>Run Test</h4></button> -->
   </div>
 </template>
 
