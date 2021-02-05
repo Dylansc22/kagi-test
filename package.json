@@ -14,6 +14,7 @@
     "leaflet": "^1.7.1",
     "leaflet-routing-machine": "^3.2.12",
     "mapbox-gl": "^2.0.1",
+    "mapbox-gl-compare": "^0.4.0",
     "vue": "^2.6.11",
     "vue-router": "^3.2.0",
     "vuex": "^3.4.0",

@@ -154,7 +154,7 @@ export default {
 <style lang="scss" scoped>
 #testButton {
   position: absolute;
-  top: 30px;
+  top: 10px;
   right: 30px;
   width: 200px;
   z-index: 1;
@@ -163,7 +163,7 @@ export default {
 
 #myMap {
   position: absolute;
-  top: 0;
+  top: 80px;
   bottom: 0;
   width: 100%;
   background-color: rgb(182, 182, 182);
