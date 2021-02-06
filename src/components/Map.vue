@@ -1,7 +1,10 @@
 <template>
   <div>
     <div id="myMap"></div>
-    <!-- <button id="testButton" @click="testerButton"><h4>Run Test</h4></button> -->
+    <button id="testButton" @click="testerButton"><h4>Run Test</h4></button>
+    <button id="locationButton" @click="addMyLocation">
+      <h4>Add My Location</h4>
+    </button>
   </div>
 </template>
 
@@ -23,17 +26,61 @@ export default {
   data() {
     return {
       map: null,
+      locationMarker: null,
       markerList: [],
-      counter: 0
+      counter: 0,
+      keys: {
+        graphhopper: process.env.VUE_APP_GRAPHOPPER_API
+      },
+      transporation: {
+        driving: true,
+        biking: false,
+        walking: false
+      },
+      routeStart: {
+        marker: false,
+        mapCenter: true,
+        otherMarkers: false
+      }
     };
   },
   methods: {
+    calcGHRoute() {
+      alert(this.keys.graphhopper);
+    },
+    addMyLocation() {
+      if (this.locationMarker) {
+        this.locationMarker.remove();
+        this.locationMarker = null;
+      } else {
+        this.locationMarker = new mapboxgl.Marker({
+          color: "orange",
+          anchor: "bottom",
+          draggable: true
+        })
+          .setLngLat({
+            lng: -122.2646,
+            lat: 37.4956
+          })
+          .addTo(this.map);
+      }
+    },
     async testerButton() {
-      let url = "https://www.wikidata.org/wiki/Special:EntityData/";
-      let x = await axios.get(url + "Q74195" + ".json");
+      // --------------- Test 'capturing' the current location of the yellow marker
+      try {
+        console.log(
+          `lat:  ${this.locationMarker.getLngLat().lat}`,
+          `long: ${this.locationMarker.getLngLat().lng}`
+        );
+      } catch (error) {
+        console.log("no marker on screen");
+      }
 
-      console.log("the promise:");
-      console.log(x.data);
+      //test calling wikipedia data via axios
+      // let url = "https://www.wikidata.org/wiki/Special:EntityData/";
+      // let x = await axios.get(url + "Q74195" + ".json");
+      // console.log("the promise:");
+      // console.log(x.data);
     },
     async fetchWikidata(QID) {
       if (QID) {
@@ -80,6 +127,7 @@ export default {
       }
     },
     addCustomMarker(marker) {
+      this.pushMarkerToList(marker);
       var el = document.createElement("div");
       el.className = "marker";
 
@@ -110,8 +158,7 @@ export default {
         .addTo(this.map);
     },
     initializeMap() {
-      mapboxgl.accessToken =
-        "pk.eyJ1IjoiZHlsYW5jIiwiYSI6Im53UGgtaVEifQ.RJiPqXwEtCLTLl-Vmd1GWQ";
+      mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API;
       this.map = new mapboxgl.Map({
         container: "myMap", // container id
         style: "mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
@@ -129,7 +176,6 @@ export default {
 
       geocoder.on("result", async e => {
         let marker = e.result;
-        this.pushMarkerToList(marker);
         marker.properties.wikiinfo = await this.fetchWikidata(
           marker.properties.wikidata
         );
@@ -151,6 +197,12 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+#locationButton {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+}
+
 #testButton {
   position: absolute;
   top: 10px;
