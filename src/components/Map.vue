@@ -12,14 +12,13 @@ import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
-var L = require("leaflet");
-require("leaflet-routing-machine");
+// var L = require("leaflet");
+// require("leaflet-routing-machine");
 const axios = require("axios");
 
 export default {
   mounted() {
     this.initializeMap();
-    this.initializeLRM();
   },
   data() {
     return {

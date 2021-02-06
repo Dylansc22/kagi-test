@@ -31,7 +31,8 @@ export default {
         "pk.eyJ1IjoiZHlsYW5jIiwiYSI6Im53UGgtaVEifQ.RJiPqXwEtCLTLl-Vmd1GWQ";
       var before = new mapboxgl.Map({
         container: "before",
-        style: "mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w",
+        style: "mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
+
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
         pitch: 15,
@@ -43,7 +44,7 @@ export default {
 
       var after = new mapboxgl.Map({
         container: "after",
-        style: "mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
+        style: "mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w",
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
         pitch: 15,
