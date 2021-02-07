@@ -18,7 +18,7 @@
   cursor: pointer;
   height: 36px;
   width: 36px;
-  background-image: url("../public/marker.png");
+  background-image: url("../public/Marker2.png");
   background-color: rgba(0, 0, 0, 0);
   background-size: cover;
 }
