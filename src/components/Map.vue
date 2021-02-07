@@ -1,9 +1,26 @@
 <template>
   <div>
     <div id="myMap"></div>
-    <button id="testButton" @click="testerButton"><h4>Run Test</h4></button>
+
+    <button id="calcRouteButton" @click="calcGHRoute">
+      <h4>Calc Route</h4>
+    </button>
+    <button id="testButton" @click="tester"><h4>Run Test</h4></button>
     <button id="locationButton" @click="addMyLocation">
       <h4>Add My Location</h4>
+    </button>
+
+    <button
+      id="mapInfo"
+      @click="isActive = !isActive"
+      :class="{ big: isActive }"
+    >
+      <h6>mapInfo</h6>
+      <!-- <div>Mode: {{ mapMode }}</div>
+      <div>Center: {{ hudCenter }}</div>
+      <div>Zoom: {{ hudZoom }}</div> -->
+      <div>Ready for GH Calc: {{ mapIsStatic }}</div>
+      <!-- <div>Current Marker: {{ currentMarker }}</div> -->
     </button>
   </div>
 </template>
@@ -15,8 +32,10 @@ import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
 
-// var L = require("leaflet");
-// require("leaflet-routing-machine");
+require("graphhopper-js-api-client");
+var GraphHopper = require("graphhopper-js-api-client/src/GraphHopperRouting"); // If you only need e.g. Routing, you can only require the needed parts
+var GHInput = require("graphhopper-js-api-client/src/GHInput");
+
 const axios = require("axios");
 
 export default {
@@ -25,6 +44,14 @@ export default {
   },
   data() {
     return {
+      //I want to be able to easily reference geojson of the routes that are on screen (both graphhopper and mapbox)
+      route: {
+        graphhopper: {},
+        mapbox: {}
+      },
+      updateRoute: false,
+      mapIsStatic: true,
+      isActive: true,
       map: null,
       locationMarker: null,
       markerList: [],
@@ -45,8 +72,72 @@ export default {
     };
   },
   methods: {
-    calcGHRoute() {
-      alert(this.keys.graphhopper);
+    zoomToNewRoute() {
+      if (this.markerList.length >= 2) {
+        this.map.fitBounds(this.route.graphhopper.paths[0].bbox, {
+          padding: 100
+        });
+      }
+    },
+    removeCurrentRoute() {
+      if (this.map.getSource("routeSource")) {
+        this.map.removeLayer("routeID");
+        this.map.removeSource("routeSource");
+      }
+    },
+    displayRoute(data) {
+      console.log("data from display route", data);
+      this.map.addSource("routeSource", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: data
+        }
+      });
+
+      this.map.addLayer({
+        id: "routeID",
+        type: "line",
+        source: "routeSource",
+        paint: {
+          "line-color": "green", //"#1c4358", //pathwayscolor //"#FF6600" //, //"#4f7ba4",
+          // "line-dasharray": [2,1.5], //[dashes, gaps] measured in units of line-width
+          "line-opacity": 0.9,
+          "line-width": {
+            type: "exponential",
+            base: 1.5,
+            stops: [
+              [0, 4.5 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+              [24, 4.5 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+            ]
+          }
+        }
+      });
+    },
+    triggerNewRoute() {
+      this.updateRoute = !this.updateRoute;
+    },
+    async calcGHRoute() {
+      let key = this.keys.graphhopper;
+      let parameters = {
+        locale: "en",
+        vehicle: "car",
+        calc_points: false,
+        points_encoded: false
+      };
+
+      let points = {
+        start: { lat: 32.225073, lng: -110.969338 },
+        end: { lat: 32.209933, lng: -110.922217 }
+      };
+
+      let url = "http://graphhopper.com/api/1/route?";
+
+      let x = await axios.get(
+        `${url}key=${key}&point=${points.start.lat},${points.start.lng}&point=${points.end.lat},${points.end.lng}&vehicle=${parameters.vehicle}&locale=${parameters.locale}&calc_points=${parameters.calc_points}&points_encoded=${parameters.points_encoded}`
+      );
+      console.log(x.data);
     },
     addMyLocation() {
       if (this.locationMarker) {
@@ -65,18 +156,21 @@ export default {
           .addTo(this.map);
       }
     },
-    async testerButton() {
-      // --------------- Test 'capturing' the current location of the yellow marker
-      try {
-        console.log(
-          `lat:  ${this.locationMarker.getLngLat().lat}`,
-          `long: ${this.locationMarker.getLngLat().lng}`
-        );
-      } catch (error) {
-        console.log("no marker on screen");
-      }
+    async tester() {
+      // ------------- update route trigger --------------------
+      this.updateRoute = !this.updateRoute;
 
-      //test calling wikipedia data via axios
+      // --------------- Test 'capturing' the current location of the yellow marker
+      // try {
+      //   console.log(
+      //     `lat:  ${this.locationMarker.getLngLat().lat}`,
+      //     `long: ${this.locationMarker.getLngLat().lng}`
+      //   );
+      // } catch (error) {
+      //   console.log("no marker on screen");
+      // }
+
+      // ---------- test calling wikipedia data via axios ------------
       // let url = "https://www.wikidata.org/wiki/Special:EntityData/";
       // let x = await axios.get(url + "Q74195" + ".json");
       // console.log("the promise:");
@@ -101,11 +195,7 @@ export default {
     pushMarkerToList(marker) {
       marker.id = "marker" + this.counter;
       this.counter = +1;
-      marker.properties.wikiinfo = {};
       this.markerList.push(marker);
-    },
-    returnTest() {
-      return "puppies from test";
     },
     async addAllWikiInfo(marker) {
       let url = "https://www.wikidata.org/wiki/Special:EntityData/";
@@ -126,36 +216,67 @@ export default {
         }
       }
     },
-    addCustomMarker(marker) {
-      this.pushMarkerToList(marker);
+    addAppleMarker(pin) {
       var el = document.createElement("div");
       el.className = "marker";
 
-      new mapboxgl.Marker({
+      let marker = new mapboxgl.Marker({
         element: el,
-        anchor: "bottom"
+        anchor: "bottom",
+        draggable: true
       })
         .setLngLat({
-          lng: marker.geometry.coordinates[0],
-          lat: marker.geometry.coordinates[1]
+          lng: pin.geometry.coordinates[0],
+          lat: pin.geometry.coordinates[1]
         })
         .setPopup(
-          new mapboxgl.Popup({ offset: 25 }) // add popups
-            .setHTML(
-              "<h3>" +
-                marker.text +
-                "</h3><p>" +
-                marker.place_name +
-                "</p>" +
-                "<h5>" +
-                marker.properties.wikidata +
-                "</h5>" +
-                "<h6>" +
-                marker.properties.wikiinfo +
-                "</h6>"
-            )
+          new mapboxgl.Popup({ offset: 25 }).setHTML(
+            "<h3>" +
+              pin.text +
+              "</h3><p>" +
+              pin.place_name +
+              "</p>" +
+              // "<h5>" +
+              // pin.properties.wikidata +
+              // "</h5>" +
+              "<h6>" +
+              pin.properties.wikiinfo +
+              "</h6>"
+          )
         )
+        .on("dragstart", () => {
+          this.mapIsStatic = false;
+        })
+        .on("dragend", async () => {
+          this.mapIsStatic = true;
+        })
         .addTo(this.map);
+
+      if (pin.properties.wikiinfo) {
+        marker.setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(
+            "<h3>" +
+              pin.text +
+              "</h3><p>" +
+              pin.place_name +
+              "</p>" +
+              "<h5>" +
+              pin.properties.wikidata +
+              "</h5>" +
+              "<h6>" +
+              pin.properties.wikiinfo +
+              "</h6>"
+          )
+        );
+      } else {
+        marker.setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(
+            "<h3>" + pin.text + "</h3><p>" + pin.place_name + "</p>"
+          )
+        );
+      }
+
+      this.pushMarkerToList(marker);
     },
     initializeMap() {
       mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API;
@@ -170,37 +291,125 @@ export default {
       const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
-        marker: false
+        marker: false, //I am using a custom Apple-like Marker. No need for default
+        flyTo: false //I only need the map to zoom to the first marker the first time (ie if markerList.length is == 1). if there is more than 1 marker, than it will zoom to the generated route via zoomToNewRoute()
       });
       this.map.addControl(geocoder, "top-left");
 
-      geocoder.on("result", async e => {
-        let marker = e.result;
-        marker.properties.wikiinfo = await this.fetchWikidata(
-          marker.properties.wikidata
-        );
-        this.addCustomMarker(marker);
-
-        //I need a technique to store all the markers onscreen (thus an array of markers)
-        //This is likely not the most memory efficient technique to manage this issue because I am likely saving a lot of excess information about each marker in the array
-        //discussed further here -- https://stackoverflow.com/questions/53037503/get-marker-feature-instance-in-mapbox
-        // this.markerList.push(e.results);
-
-        // console.log("wiki info below");
-        // console.log(e.result.properties.wikiinfo);
-        // console.log(e.properties.wikiinfo)
+      this.map.on("move", () => {
+        this.mapIsStatic = false;
       });
-      //
+
+      this.map.on("moveend", () => {
+        this.mapIsStatic = true;
+      });
+
+      //*** */
+      //The above geocoder.on("result",...) is written with async/await but it was being called twice. I don't understand why because I have it operating behind an "await" -- Had to add an if statement to check if the description was already returned to force it to only be called once?
+      //This still has a bug that needs addressing -- the first map drag after a marker is returned does not engadge.
+      geocoder.on("result", async e => {
+        geocoder.clear(); //this clears the searchbox after every search. Without it, the search term would stay in the box, until you hit 'X' to close/clear the searchbox. Bad UX. 
+        let marker = e.result;
+        if (!marker.properties.wikiinfo) {
+          marker.properties.wikiinfo = await this.fetchWikidata(
+            marker.properties.wikidata
+          );
+          this.addAppleMarker(marker);
+          if (this.markerList.length == 1) {
+            this.map.flyTo({
+              center: [
+                marker.geometry.coordinates[0], 
+                marker.geometry.coordinates[1] 
+              ],
+              essential: true // this animation is considered essential with respect to prefers-reduced-motion
+            });
+            console.log(marker);
+          }
+          this.removeCurrentRoute();
+          this.triggerNewRoute();
+        }
+      });
+    },
+    calculateRoute() {
+      let defaults = {
+        key: this.keys.graphhopper,
+        vehicle: "car",
+        elevation: false,
+        host: "https://graphhopper.com/api/1/"
+      };
+
+      let ghRouting = new GraphHopper(defaults);
+
+      if (this.markerList.length >= 2) {
+        this.markerList.map(e => {
+          ghRouting.addPoint(new GHInput(e.getLngLat().lat, e.getLngLat().lng));
+        });
+
+        ghRouting
+          .doRequest()
+          .then(json => {
+            let data = json.paths[0].points;
+            this.route.graphhopper = json;
+            this.displayRoute(data);
+            this.zoomToNewRoute();
+
+            // this.$emit(
+            //   "childDisplayRoute",
+            //   val.id,
+            //   val.source,
+            //   jsonParsed.paths[0].points
+            // );
+          })
+          .catch(err => {
+            alert("uh oh spaghettios! Graphhopper errored out");
+            console.error(err.message);
+          });
+      }
+    }
+  },
+
+  watch: {
+    updateRoute() {
+      this.calculateRoute();
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
+#mapInfo {
+  &.big {
+    height: auto;
+    width: auto;
+  }
+  height: 40px;
+  width: 40px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: bold;
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  background-color: rgba(253, 253, 253, 0.5);
+  border: solid 1px grey;
+  border-radius: 4px;
+  padding: 5px;
+}
+
 #locationButton {
   position: absolute;
   bottom: 30px;
   right: 30px;
+}
+
+#calcRouteButton {
+  position: absolute;
+  top: 10px;
+  right: 240px;
+  width: 200px;
+  z-index: 1;
+  border: solid 2px black;
 }
 
 #testButton {
