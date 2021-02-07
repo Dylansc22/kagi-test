@@ -1,11 +1,6 @@
 <template>
   <div>
     <div id="myMap"></div>
-
-    <button id="calcRouteButton" @click="calcGHRoute">
-      <h4>Calc Route</h4>
-    </button>
-    <button id="testButton" @click="tester"><h4>Run Test</h4></button>
     <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
