@@ -57,7 +57,8 @@ export default {
       markerList: [],
       counter: 0,
       keys: {
-        graphhopper: process.env.VUE_APP_GRAPHOPPER_API
+        graphhopper: process.env.VUE_APP_GRAPHOPPER_API,
+        mapbox: process.env.VUE_APP_MAPBOX_API
       },
       transporation: {
         driving: true,
@@ -72,6 +73,40 @@ export default {
     };
   },
   methods: {
+    async calculateMapboxRoute() {
+      console.log("calc mapbox route triggered");
+      let url = "https://api.mapbox.com/directions/v5/mapbox/";
+      let modeOfTransporation = "driving"; // driving or walking or cycling
+      let key = this.keys.mapbox;
+
+      if (this.markerList.length >= 2) {
+        let pointString = "";
+        this.markerList.map(e => {
+          pointString =
+            pointString +
+            e.getLngLat().lng.toString() +
+            `,` +
+            e.getLngLat().lat.toString() +
+            `;`;
+        });
+        pointString = "/" + pointString.slice(0, -1);
+
+        let x = await axios.get(
+          `${url}${modeOfTransporation}${pointString}?access_token=${key}&geometries=geojson`
+        );
+        this.route.mapbox = x.data;
+        this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox")
+      }
+    },
+    flyToFirstMarker(marker) {
+      this.map.flyTo({
+        center: [
+          marker.geometry.coordinates[0],
+          marker.geometry.coordinates[1]
+        ],
+        essential: true // this animation is considered essential with respect to prefers-reduced-motion
+      });
+    },
     zoomToNewRoute() {
       if (this.markerList.length >= 2) {
         this.map.fitBounds(this.route.graphhopper.paths[0].bbox, {
@@ -80,14 +115,17 @@ export default {
       }
     },
     removeCurrentRoute() {
-      if (this.map.getSource("routeSource")) {
-        this.map.removeLayer("routeID");
-        this.map.removeSource("routeSource");
+      if (this.map.getSource("graphhopperRouteSource")) {
+        this.map.removeLayer("graphhopperRouteID");
+        this.map.removeSource("graphhopperRouteSource");
+      }
+      if (this.map.getSource("mapboxRouteSource")) {
+        this.map.removeLayer("mapboxRouteID");
+        this.map.removeSource("mapboxRouteSource");
       }
     },
-    displayRoute(data) {
-      console.log("data from display route", data);
-      this.map.addSource("routeSource", {
+    displayRoute(data, routingEngine) {
+      this.map.addSource(`${routingEngine}RouteSource`, {
         type: "geojson",
         data: {
           type: "Feature",
@@ -96,20 +134,22 @@ export default {
         }
       });
 
+      let color = routingEngine == "graphhopper" ? "#28ac9f" : "#0072b8";
+
       this.map.addLayer({
-        id: "routeID",
+        id: `${routingEngine}RouteID`,
         type: "line",
-        source: "routeSource",
+        source: `${routingEngine}RouteSource`,
         paint: {
-          "line-color": "green", //"#1c4358", //pathwayscolor //"#FF6600" //, //"#4f7ba4",
+          "line-color": color, 
           // "line-dasharray": [2,1.5], //[dashes, gaps] measured in units of line-width
-          "line-opacity": 0.9,
+          "line-opacity": 0.8,
           "line-width": {
             type: "exponential",
             base: 1.5,
             stops: [
-              [0, 4.5 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
-              [24, 4.5 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+              [0, 7 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+              [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
         }
@@ -157,8 +197,20 @@ export default {
       }
     },
     async tester() {
+
+      // ---------------- test fetching mapbox directions ----------
+      // let url = "https://api.mapbox.com/directions/v5";
+      // let modeOfTransporation = "/mapbox/cycling";
+      // let start = "/-122.42,37.78";
+      // let end = "-77.03,38.91";
+      // let key = this.keys.mapbox;
+      // let x = await axios.get(
+      //   `${url}${modeOfTransporation}${start};${end}?access_token=${key}&geometries=geojson`
+      // );
+      // console.log(x.data);
+
       // ------------- update route trigger --------------------
-      this.updateRoute = !this.updateRoute;
+      // this.updateRoute = !this.updateRoute;
 
       // --------------- Test 'capturing' the current location of the yellow marker
       // try {
@@ -310,7 +362,7 @@ export default {
       //The above geocoder.on("result",...) is written with async/await but it was being called twice. I don't understand why because I have it operating behind an "await" -- Had to add an if statement to check if the description was already returned to force it to only be called once?
       //This still has a bug that needs addressing -- the first map drag after a marker is returned does not engadge.
       geocoder.on("result", async e => {
-        geocoder.clear(); //this clears the searchbox after every search. Without it, the search term would stay in the box, until you hit 'X' to close/clear the searchbox. Bad UX. 
+        geocoder.clear(); //this clears the searchbox after every search. Without it, the search term would stay in the box, until you hit 'X' to close/clear the searchbox. Bad UX.
         let marker = e.result;
         if (!marker.properties.wikiinfo) {
           marker.properties.wikiinfo = await this.fetchWikidata(
@@ -318,21 +370,14 @@ export default {
           );
           this.addAppleMarker(marker);
           if (this.markerList.length == 1) {
-            this.map.flyTo({
-              center: [
-                marker.geometry.coordinates[0], 
-                marker.geometry.coordinates[1] 
-              ],
-              essential: true // this animation is considered essential with respect to prefers-reduced-motion
-            });
-            console.log(marker);
+            this.flyToFirstMarker(marker);
           }
           this.removeCurrentRoute();
           this.triggerNewRoute();
         }
       });
     },
-    calculateRoute() {
+    calculateGraphhopperRoute() {
       let defaults = {
         key: this.keys.graphhopper,
         vehicle: "car",
@@ -350,9 +395,8 @@ export default {
         ghRouting
           .doRequest()
           .then(json => {
-            let data = json.paths[0].points;
             this.route.graphhopper = json;
-            this.displayRoute(data);
+            this.displayRoute(this.route.graphhopper.paths[0].points, "graphhopper");
             this.zoomToNewRoute();
 
             // this.$emit(
@@ -372,7 +416,8 @@ export default {
 
   watch: {
     updateRoute() {
-      this.calculateRoute();
+      this.calculateGraphhopperRoute();
+      this.calculateMapboxRoute();
     }
   }
 };
