@@ -6,27 +6,38 @@
       <h4>Calc Route</h4>
     </button>
     <button id="testButton" @click="tester"><h4>Run Test</h4></button>
-    <button id="locationButton" @click="addMyLocation">
-      <h4>Add My Location</h4>
-    </button>
-    <button id="removeLastMarker" @click="undoLastMarker">Undo</button>
-
-    <button
-      id="mapInfo"
-      @click="isActive = !isActive"
-      :class="{ big: isActive }"
-    >
-      <h6>mapInfo</h6>
-      <!-- <div>Mode: {{ mapMode }}</div>
-      <div>Center: {{ hudCenter }}</div>
-      <div>Zoom: {{ hudZoom }}</div> -->
-      <div>Ready for GH Calc: {{ mapIsStatic }}</div>
-      <!-- <div>Current Marker: {{ currentMarker }}</div> -->
+    <div id="legend" :class="{ active: markerList.length >= 2 }">
+      <div id="controls">
+        <button
+          @click="changeTransporation('driving')"
+          :class="{ activeButton: transporation == 'driving' }"
+        >
+          Driving
+        </button>
+        <button
+          @click="changeTransporation('cycling')"
+          :class="{ activeButton: transporation == 'cycling' }"
+        >
+          Cycling
+        </button>
+        <button
+          @click="changeTransporation('walking')"
+          :class="{ activeButton: transporation == 'walking' }"
+        >
+          Walking
+        </button>
+      </div>
+    </div>
+    <button id="removeLastMarker" @click="undoLastMarker">
+      <i class="fas fa-undo-alt fa-2x"></i>
     </button>
   </div>
 </template>
 
 <script>
+import "@fortawesome/fontawesome-free/css/all.css";
+import "@fortawesome/fontawesome-free/js/all.js";
+
 import "mapbox-gl/dist/mapbox-gl.css";
 import mapboxgl from "mapbox-gl";
 
@@ -54,18 +65,13 @@ export default {
       mapIsStatic: true,
       isActive: true,
       map: null,
-      locationMarker: null,
       markerList: [],
       counter: 0,
       keys: {
         graphhopper: process.env.VUE_APP_GRAPHOPPER_API,
         mapbox: process.env.VUE_APP_MAPBOX_API
       },
-      transporation: {
-        driving: true,
-        biking: false,
-        walking: false
-      },
+      transporation: "driving",
       routeStart: {
         marker: false,
         mapCenter: true,
@@ -74,6 +80,18 @@ export default {
     };
   },
   methods: {
+    changeTransporation(type) {
+      if (this.transporation != type) {
+        this.transporation = type;
+        if (this.markerList.length >= 2) {
+        this.map.removeLayer("graphhopperRouteID")
+        this.map.removeLayer("mapboxRouteID")
+        this.map.removeSource("graphhopperRouteSource")
+        this.map.removeSource("mapboxRouteSource")
+        this.triggerNewRoute();
+      }
+      }
+    },
     undoLastMarker(){
       if (this.markerList.length >= 2) {
         this.map.removeLayer("graphhopperRouteID")
@@ -82,17 +100,22 @@ export default {
         this.map.removeSource("mapboxRouteSource")
         this.markerList.[this.markerList.length - 1].remove();
         this.markerList.pop();
-        this.calculateMapboxRoute();
-        this.calculateGraphhopperRoute();
+        this.triggerNewRoute();
       } else if (this.markerList.length >= 1) {
         this.markerList.[this.markerList.length - 1].remove();
         this.markerList.pop();
       }
     },
     async calculateMapboxRoute() {
-      console.log("calc mapbox route triggered");
+      if (this.transporation == "driving") {
+        var mode = "driving"
+      } else if (this.transporation == "cycling") {
+        mode = "cycling"
+      } else if (this.transporation == "walking") {
+        mode = "walking"
+      }
+
       let url = "https://api.mapbox.com/directions/v5/mapbox/";
-      let modeOfTransporation = "driving"; // driving or walking or cycling
       let key = this.keys.mapbox;
 
       if (this.markerList.length >= 2) {
@@ -108,7 +131,7 @@ export default {
         pointString = "/" + pointString.slice(0, -1);
 
         let x = await axios.get(
-          `${url}${modeOfTransporation}${pointString}?access_token=${key}&geometries=geojson`
+          `${url}${mode}${pointString}?access_token=${key}&geometries=geojson`
         );
         this.route.mapbox = x.data;
         this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox")
@@ -152,13 +175,10 @@ export default {
 
       let color = routingEngine == "graphhopper" ? "#28ac9f" : "#0072b8";
 
-      this.map.addLayer({
-        id: `${routingEngine}RouteID`,
-        type: "line",
-        source: `${routingEngine}RouteSource`,
-        paint: {
-          "line-color": color, 
-          // "line-dasharray": [2,1.5], //[dashes, gaps] measured in units of line-width
+      if (this.transporation == "driving") {
+        var shape = "line"
+        var style = {
+          "line-color": color,
           "line-opacity": 0.8,
           "line-width": {
             type: "exponential",
@@ -169,6 +189,51 @@ export default {
             ]
           }
         }
+        var layout = {}; //default
+      } else if (this.transporation == "cycling") {
+        shape = "line"
+        style = {
+          "line-color": color,
+          "line-dasharray": [2,1.25], //[dashes, gaps] measured in units of line-width
+          "line-opacity": 0.8,
+          "line-width": {
+            type: "exponential",
+            base: 1.5,
+            stops: [
+              [0, 7 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+              [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+            ]
+          }
+        }
+        layout = {}; //default
+      } else if (this.transporation == "walking") {
+        shape = "line"
+        style = {
+          "line-color": color,
+          "line-dasharray": [.1,2], //[dashes, gaps] measured in units of line-width
+          "line-opacity": 0.8,
+          "line-width": {
+            type: "exponential",
+            base: 1.5,
+            stops: [
+              [0, 7 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+              [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
+            ]
+          }
+        }
+        layout = {
+        "line-cap": "round",
+        "line-join": "round"
+      }
+      }
+
+
+      this.map.addLayer({
+        id: `${routingEngine}RouteID`,
+        type: shape,
+        source: `${routingEngine}RouteSource`,
+        paint: style,
+        layout: layout
       });
     },
     triggerNewRoute() {
@@ -194,23 +259,6 @@ export default {
         `${url}key=${key}&point=${points.start.lat},${points.start.lng}&point=${points.end.lat},${points.end.lng}&vehicle=${parameters.vehicle}&locale=${parameters.locale}&calc_points=${parameters.calc_points}&points_encoded=${parameters.points_encoded}`
       );
       console.log(x.data);
-    },
-    addMyLocation() {
-      if (this.locationMarker) {
-        this.locationMarker.remove();
-        this.locationMarker = null;
-      } else {
-        this.locationMarker = new mapboxgl.Marker({
-          color: "orange",
-          anchor: "bottom",
-          draggable: true
-        })
-          .setLngLat({
-            lng: -122.2646,
-            lat: 37.4956
-          })
-          .addTo(this.map);
-      }
     },
     async tester() {
 
@@ -394,9 +442,17 @@ export default {
       });
     },
     calculateGraphhopperRoute() {
+      if (this.transporation == "driving") {
+        var mode = "car"
+      } else if (this.transporation == "cycling") {
+        mode = "bike"
+      } else if (this.transporation == "walking") {
+        mode = "foot"
+      }
+
       let defaults = {
         key: this.keys.graphhopper,
-        vehicle: "car",
+        vehicle: mode,
         elevation: false,
         host: "https://graphhopper.com/api/1/"
       };
@@ -440,6 +496,76 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+#legend {
+  font-size: 18px;
+  font-weight: 700;
+  position: absolute;
+  bottom: 30px;
+  right: 70px;
+  border: solid 1px black;
+  background-color: rgba(253, 253, 253, 0.5);
+  width: 0px;
+  height: 78px;
+  border-top-left-radius: 15px;
+  border-bottom-left-radius: 15px;
+  overflow: hidden;
+
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  align-items: center;
+  text-align: center;
+
+  &.active {
+    width: 300px;
+    padding-right: 40px;
+    padding-left: 10px;
+  }
+
+  /*animations & transitions*/
+  -webkit-transition: all 0.3s;
+  -moz-transition: all 0.3s;
+  -o-transition: all 0.3s;
+  transition: all 0.3s;
+
+  #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr;
+    align-items: center;
+    text-align: center;
+
+    button {
+      margin-left: 10px;
+      margin-right: 10px;
+      font-size: 14px;
+      height: 30px;
+      border-radius: 5px;
+      border: solid 1px black;
+      outline: none;
+
+      &:active {
+        transform: scale(0.98);
+      }
+      /*animations & transitions*/
+      -webkit-transition: all 0.05s;
+      -moz-transition: all 0.05s;
+      -o-transition: all 0.05s;
+      transition: all 0.05s;
+
+      &.activeButton {
+        font-weight: 600;
+      }
+    }
+  }
+
+  /*animations & transitions*/
+  -webkit-transition: all 0.3;
+  -moz-transition: all 0.3;
+  -o-transition: all 0.3;
+  transition: all 0.3;
+}
+
 #mapInfo {
   &.big {
     height: auto;
@@ -467,9 +593,28 @@ export default {
 }
 
 #removeLastMarker {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: solid 1px black;
   position: absolute;
   bottom: 30px;
   right: 30px;
+
+  &:focus {
+    outline: none;
+  }
+  &:hover {
+    cursor: pointer;
+  }
+  &:active {
+    transform: scale(0.9);
+  }
+  /*animations & transitions*/
+  -webkit-transition: all 0.1s;
+  -moz-transition: all 0.1s;
+  -o-transition: all 0.1s;
+  transition: all 0.1s;
 }
 
 #calcRouteButton {
