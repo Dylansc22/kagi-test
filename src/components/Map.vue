@@ -9,6 +9,7 @@
     <button id="locationButton" @click="addMyLocation">
       <h4>Add My Location</h4>
     </button>
+    <button id="removeLastMarker" @click="undoLastMarker">Undo</button>
 
     <button
       id="mapInfo"
@@ -73,6 +74,21 @@ export default {
     };
   },
   methods: {
+    undoLastMarker(){
+      if (this.markerList.length >= 2) {
+        this.map.removeLayer("graphhopperRouteID")
+        this.map.removeLayer("mapboxRouteID")
+        this.map.removeSource("graphhopperRouteSource")
+        this.map.removeSource("mapboxRouteSource")
+        this.markerList.[this.markerList.length - 1].remove();
+        this.markerList.pop();
+        this.calculateMapboxRoute();
+        this.calculateGraphhopperRoute();
+      } else if (this.markerList.length >= 1) {
+        this.markerList.[this.markerList.length - 1].remove();
+        this.markerList.pop();
+      }
+    },
     async calculateMapboxRoute() {
       console.log("calc mapbox route triggered");
       let url = "https://api.mapbox.com/directions/v5/mapbox/";
@@ -445,6 +461,12 @@ export default {
 }
 
 #locationButton {
+  position: absolute;
+  bottom: 70px;
+  right: 30px;
+}
+
+#removeLastMarker {
   position: absolute;
   bottom: 30px;
   right: 30px;
