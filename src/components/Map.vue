@@ -6,7 +6,7 @@
       <h4>Calc Route</h4>
     </button>
     <button id="testButton" @click="tester"><h4>Run Test</h4></button>
-    <div id="legend" :class="{ active: markerList.length >= 2 }">
+    <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
           @click="changeTransporation('driving')"
@@ -27,6 +27,10 @@
           Walking
         </button>
       </div>
+    </div>
+    <div id="route" :class="{ showColors: markerList.length >= 2 }">
+      <span class="mapboxColor">Mapbox</span> |
+      <span class="graphhopperColor">Graphhopper</span>
     </div>
     <button id="removeLastMarker" @click="undoLastMarker">
       <i class="fas fa-undo-alt fa-2x"></i>
@@ -365,6 +369,17 @@ export default {
         })
         .on("dragend", async () => {
           this.mapIsStatic = true;
+
+      if (this.markerList.length >= 2) {
+        this.map.removeLayer("graphhopperRouteID")
+        this.map.removeLayer("mapboxRouteID")
+        this.map.removeSource("graphhopperRouteSource")
+        this.map.removeSource("mapboxRouteSource")
+        this.triggerNewRoute();
+      }
+
+
+
         })
         .addTo(this.map);
 
@@ -496,7 +511,28 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-#legend {
+#route {
+  display: none;
+
+  &.showColors {
+    display: inline;
+    font-size: 22px;
+    font-weight: 700;
+    position: absolute;
+    bottom: 120px;
+    right: 70px;
+
+    .mapboxColor {
+      color: #328cc3;
+    }
+
+    .graphhopperColor {
+      color: #52bcb1;
+    }
+  }
+}
+
+#controller {
   font-size: 18px;
   font-weight: 700;
   position: absolute;
@@ -539,7 +575,7 @@ export default {
       margin-left: 10px;
       margin-right: 10px;
       font-size: 14px;
-      height: 30px;
+      height: 50px;
       border-radius: 5px;
       border: solid 1px black;
       outline: none;
