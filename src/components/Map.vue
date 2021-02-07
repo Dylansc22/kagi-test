@@ -284,7 +284,9 @@ export default {
         container: "myMap", // container id
         style: "mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
         center: [-122.2646, 37.4956], // starting position [lng, lat]
-        zoom: 11 // starting zoom
+        zoom: 11, // starting zoom
+        minZoom: 3,
+        maxPitch: 60
       });
 
       //Add geocoder
@@ -426,6 +428,6 @@ export default {
   top: 80px;
   bottom: 0;
   width: 100%;
-  background-color: rgb(182, 182, 182);
+  background-color: #ade1f5;
 }
 </style>
