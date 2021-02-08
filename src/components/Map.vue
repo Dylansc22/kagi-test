@@ -1,11 +1,12 @@
 <template>
   <div>
     <div id="myMap"></div>
-
     <button id="calcRouteButton" @click="calcGHRoute">
       <h4>Calc Route</h4>
     </button>
-    <button id="testButton" @click="tester"><h4>Run Test</h4></button>
+    <button id="testButton" @click="compareRoutesUsingTurf">
+      <h4>Run Test</h4>
+    </button>
     <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
@@ -52,6 +53,8 @@ require("graphhopper-js-api-client");
 var GraphHopper = require("graphhopper-js-api-client/src/GraphHopperRouting"); // If you only need e.g. Routing, you can only require the needed parts
 var GHInput = require("graphhopper-js-api-client/src/GHInput");
 
+import pointToLineDistance from "@turf/point-to-line-distance";
+
 const axios = require("axios");
 
 export default {
@@ -84,39 +87,56 @@ export default {
     };
   },
   methods: {
+    compareRoutesUsingTurf() {
+      //Using the Map Maching Mapbox API -- Only 100 Coordinates Per Request -- https://docs.mapbox.com/api/overview/
+      let gh = this.route.graphhopper.paths[0].points.coordinates;
+      let mp = this.route.mapbox.routes[0].geometry.coordinates;
+
+      let differenceMiles = [];
+      mp.map(coord => {
+        differenceMiles.push(
+          pointToLineDistance(coord, gh, {
+            units: "miles",
+            mercator: false
+          })
+        );
+      });
+      differenceMiles = differenceMiles.map(e => Math.round(e * 10) / 10);
+      console.log(differenceMiles)
+    },
     changeTransporation(type) {
       if (this.transporation != type) {
         this.transporation = type;
         if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.triggerNewRoute();
-      }
+          this.map.removeLayer("graphhopperRouteID");
+          this.map.removeLayer("mapboxRouteID");
+          this.map.removeSource("graphhopperRouteSource");
+          this.map.removeSource("mapboxRouteSource");
+          this.triggerNewRoute();
+        }
       }
     },
-    undoLastMarker(){
+    undoLastMarker() {
       if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.markerList.[this.markerList.length - 1].remove();
+        this.map.removeLayer("graphhopperRouteID");
+        this.map.removeLayer("mapboxRouteID");
+        this.map.removeSource("graphhopperRouteSource");
+        this.map.removeSource("mapboxRouteSource");
+        this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
         this.triggerNewRoute();
       } else if (this.markerList.length >= 1) {
-        this.markerList.[this.markerList.length - 1].remove();
+        this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
       }
     },
     async calculateMapboxRoute() {
       if (this.transporation == "driving") {
-        var mode = "driving"
+        var mode = "driving";
       } else if (this.transporation == "cycling") {
-        mode = "cycling"
+        mode = "cycling";
       } else if (this.transporation == "walking") {
-        mode = "walking"
+        mode = "walking";
       }
 
       let url = "https://api.mapbox.com/directions/v5/mapbox/";
@@ -138,7 +158,7 @@ export default {
           `${url}${mode}${pointString}?access_token=${key}&geometries=geojson`
         );
         this.route.mapbox = x.data;
-        this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox")
+        this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox");
       }
     },
     flyToFirstMarker(marker) {
@@ -180,7 +200,7 @@ export default {
       let color = routingEngine == "graphhopper" ? "#28ac9f" : "#0072b8";
 
       if (this.transporation == "driving") {
-        var shape = "line"
+        var shape = "line";
         var style = {
           "line-color": color,
           "line-opacity": 0.8,
@@ -192,13 +212,13 @@ export default {
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         var layout = {}; //default
       } else if (this.transporation == "cycling") {
-        shape = "line"
+        shape = "line";
         style = {
           "line-color": color,
-          "line-dasharray": [2,1.25], //[dashes, gaps] measured in units of line-width
+          "line-dasharray": [2, 1.25], //[dashes, gaps] measured in units of line-width
           "line-opacity": 0.8,
           "line-width": {
             type: "exponential",
@@ -208,13 +228,13 @@ export default {
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         layout = {}; //default
       } else if (this.transporation == "walking") {
-        shape = "line"
+        shape = "line";
         style = {
           "line-color": color,
-          "line-dasharray": [.1,2], //[dashes, gaps] measured in units of line-width
+          "line-dasharray": [0.1, 2], //[dashes, gaps] measured in units of line-width
           "line-opacity": 0.8,
           "line-width": {
             type: "exponential",
@@ -224,13 +244,12 @@ export default {
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         layout = {
-        "line-cap": "round",
-        "line-join": "round"
+          "line-cap": "round",
+          "line-join": "round"
+        };
       }
-      }
-
 
       this.map.addLayer({
         id: `${routingEngine}RouteID`,
@@ -265,7 +284,6 @@ export default {
       console.log(x.data);
     },
     async tester() {
-
       // ---------------- test fetching mapbox directions ----------
       // let url = "https://api.mapbox.com/directions/v5";
       // let modeOfTransporation = "/mapbox/cycling";
@@ -276,10 +294,8 @@ export default {
       //   `${url}${modeOfTransporation}${start};${end}?access_token=${key}&geometries=geojson`
       // );
       // console.log(x.data);
-
       // ------------- update route trigger --------------------
       // this.updateRoute = !this.updateRoute;
-
       // --------------- Test 'capturing' the current location of the yellow marker
       // try {
       //   console.log(
@@ -289,7 +305,6 @@ export default {
       // } catch (error) {
       //   console.log("no marker on screen");
       // }
-
       // ---------- test calling wikipedia data via axios ------------
       // let url = "https://www.wikidata.org/wiki/Special:EntityData/";
       // let x = await axios.get(url + "Q74195" + ".json");
@@ -370,16 +385,13 @@ export default {
         .on("dragend", async () => {
           this.mapIsStatic = true;
 
-      if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.triggerNewRoute();
-      }
-
-
-
+          if (this.markerList.length >= 2) {
+            this.map.removeLayer("graphhopperRouteID");
+            this.map.removeLayer("mapboxRouteID");
+            this.map.removeSource("graphhopperRouteSource");
+            this.map.removeSource("mapboxRouteSource");
+            this.triggerNewRoute();
+          }
         })
         .addTo(this.map);
 
@@ -458,11 +470,11 @@ export default {
     },
     calculateGraphhopperRoute() {
       if (this.transporation == "driving") {
-        var mode = "car"
+        var mode = "car";
       } else if (this.transporation == "cycling") {
-        mode = "bike"
+        mode = "bike";
       } else if (this.transporation == "walking") {
-        mode = "foot"
+        mode = "foot";
       }
 
       let defaults = {
@@ -483,7 +495,10 @@ export default {
           .doRequest()
           .then(json => {
             this.route.graphhopper = json;
-            this.displayRoute(this.route.graphhopper.paths[0].points, "graphhopper");
+            this.displayRoute(
+              this.route.graphhopper.paths[0].points,
+              "graphhopper"
+            );
             this.zoomToNewRoute();
 
             // this.$emit(
