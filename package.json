@@ -10,6 +10,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.2",
     "@mapbox/mapbox-gl-geocoder": "^4.7.0",
+    "@turf/nearest-point": "^6.3.0",
     "@turf/point-to-line-distance": "^6.3.0",
     "axios": "^0.21.1",
     "core-js": "^3.6.5",
