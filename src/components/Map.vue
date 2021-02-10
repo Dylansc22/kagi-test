@@ -1,6 +1,12 @@
 <template>
   <div>
     <div id="myMap"></div>
+<<<<<<< HEAD
+=======
+    <!-- <button id="testButton" @click="tester">
+      <h4>Run Test</h4>
+    </button> -->
+>>>>>>> compare-routes
     <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
@@ -47,6 +53,10 @@ require("graphhopper-js-api-client");
 var GraphHopper = require("graphhopper-js-api-client/src/GraphHopperRouting"); // If you only need e.g. Routing, you can only require the needed parts
 var GHInput = require("graphhopper-js-api-client/src/GHInput");
 
+import pointToLineDistance from "@turf/point-to-line-distance";
+import nearestPoint from "@turf/nearest-point";
+import * as turf from "@turf/helpers";
+
 const axios = require("axios");
 
 export default {
@@ -58,9 +68,12 @@ export default {
       //I want to be able to easily reference geojson of the routes that are on screen (both graphhopper and mapbox)
       route: {
         graphhopper: {},
-        mapbox: {}
+        mapbox: {},
+        alternatives: {
+          type: "FeatureCollection",
+          features: []
+        }
       },
-      updateRoute: false,
       mapIsStatic: true,
       isActive: true,
       map: null,
@@ -79,39 +92,128 @@ export default {
     };
   },
   methods: {
+    // addGeojsonCircles(routingEngine) {
+    //   let circleColor = routingEngine == "graphhopper" ? "brown" : "orange";
+
+    //   this.map.addLayer({
+    //     id: `${routingEngine}CircleID`,
+    //     type: "circle",
+    //     source: `${routingEngine}RouteSource`,
+    //     paint: {
+    //       "circle-radius": 5,
+    //       "circle-color": circleColor
+    //     }
+    //   });
+    // },
+    compareRoutesUsingTurf() {
+      //Using the Map Maching Mapbox API -- Only 100 Coordinates Per Request -- https://docs.mapbox.com/api/overview/
+      let gh = this.route.graphhopper.paths[0].points.coordinates;
+      let mp = this.route.mapbox.routes[0].geometry.coordinates;
+
+      //mapbox route (Linestring Feature), re-processed as Points FeatureCollection
+      //I need this for a later turf.nearestPoints() function
+      let input = [];
+      mp.map(e => {
+        input.push(turf.point(e));
+      });
+      let mapboxRouteAsPointsFeature = turf.featureCollection(input);
+
+      let counter = 0;
+      let detourSegment = [];
+      let threshold = 0.01;
+
+      gh.map((element, index) => {
+        let currentDeviation = pointToLineDistance(element, mp, {
+          units: "miles",
+          mercator: false
+        });
+
+        currentDeviation = Math.round(currentDeviation * 100) / 100;
+
+        //The current element is first segment of a detour
+        if (currentDeviation >= threshold && detourSegment.length == 0) {
+          // let snappedPoint = nearestPoint(element, mapboxRouteAsPointsFeature);
+          // detourSegment.push(snappedPoint.geometry.coordinates);
+          detourSegment.push(gh[index - 1]);
+          detourSegment.push(element);
+        }
+        //The current element is part of the middle of a detour, far off course the mapbox route
+        else if (currentDeviation >= threshold && detourSegment.length != 0) {
+          detourSegment.push(element);
+        }
+
+        //The current element is the end of a detour, rejoining the main mapbox route
+        else if (currentDeviation < threshold && detourSegment.length != 0) {
+          // let snappedPoint = nearestPoint(element, mapboxRouteAsPointsFeature);
+          // detourSegment.push(snappedPoint.geometry.coordinates);
+
+          detourSegment.push(element);
+          // detourSegment.push(gh[index + 1]);
+
+          this.route.alternatives.features[counter] = {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: detourSegment
+            }
+          };
+          detourSegment = [];
+          counter++;
+        } else if (gh.length - 1 === index && detourSegment.legnth != 0) {
+          let snappedPoint = nearestPoint(element, mapboxRouteAsPointsFeature);
+          detourSegment.push(snappedPoint);
+          this.route.alternatives.features[counter] = {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: detourSegment
+            }
+          };
+        }
+      });
+    },
+    clearMap() {
+      // this.map.removeLayer("graphhopperCircleID");
+      // this.map.removeLayer("mapboxCircleID");
+      this.map.removeLayer("graphhopperRouteID");
+      this.map.removeLayer("mapboxRouteID");
+      this.map.removeSource("graphhopperRouteSource");
+      this.map.removeSource("mapboxRouteSource");
+    },
     changeTransporation(type) {
+      //only trigger behavior if someone is clicking a different transportion type than what is currently selected
       if (this.transporation != type) {
         this.transporation = type;
         if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.triggerNewRoute();
-      }
+          this.clearMap();
+          this.triggerNewRoute();
+        }
       }
     },
-    undoLastMarker(){
-      if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.markerList.[this.markerList.length - 1].remove();
+    undoLastMarker() {
+       if (this.markerList.length > 2) {
+        this.clearMap();
+        this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
         this.triggerNewRoute();
-      } else if (this.markerList.length >= 1) {
-        this.markerList.[this.markerList.length - 1].remove();
+      }
+      else if (this.markerList.length == 2) {
+        this.clearMap();
+        this.markerList[this.markerList.length - 1].remove();
+        this.markerList.pop();
+      }
+      else if (this.markerList.length == 1) {
+        this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
       }
     },
-    async calculateMapboxRoute() {
+    async mapboxRoutePromise() {
       if (this.transporation == "driving") {
-        var mode = "driving"
+        var mode = "driving";
       } else if (this.transporation == "cycling") {
-        mode = "cycling"
+        mode = "cycling";
       } else if (this.transporation == "walking") {
-        mode = "walking"
+        mode = "walking";
       }
 
       let url = "https://api.mapbox.com/directions/v5/mapbox/";
@@ -129,11 +231,9 @@ export default {
         });
         pointString = "/" + pointString.slice(0, -1);
 
-        let x = await axios.get(
-          `${url}${mode}${pointString}?access_token=${key}&geometries=geojson`
+        return axios.get(
+          `${url}${mode}${pointString}?access_token=${key}&geometries=geojson&overview=full`
         );
-        this.route.mapbox = x.data;
-        this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox")
       }
     },
     flyToFirstMarker(marker) {
@@ -155,61 +255,73 @@ export default {
     removeCurrentRoute() {
       if (this.map.getSource("graphhopperRouteSource")) {
         this.map.removeLayer("graphhopperRouteID");
+        // this.map.removeLayer("graphhopperCircleID");
         this.map.removeSource("graphhopperRouteSource");
       }
       if (this.map.getSource("mapboxRouteSource")) {
         this.map.removeLayer("mapboxRouteID");
+        // this.map.removeLayer("mapboxCircleID");
         this.map.removeSource("mapboxRouteSource");
       }
     },
-    displayRoute(data, routingEngine) {
-      this.map.addSource(`${routingEngine}RouteSource`, {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: data
-        }
-      });
+    displayRoute(myData, routingEngine) {
+      
+      if (routingEngine == "graphhopper") {
+        this.map.addSource(`${routingEngine}RouteSource`, {
+          type: "geojson",
+          data: myData
+        });
+      } 
+      //Mapbox Route
+      else {
+        this.map.addSource(`${routingEngine}RouteSource`, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: myData
+          }
+        });
+      }
 
       let color = routingEngine == "graphhopper" ? "#28ac9f" : "#0072b8";
 
       if (this.transporation == "driving") {
-        var shape = "line"
+        var shape = "line";
         var style = {
           "line-color": color,
-          "line-opacity": 0.8,
+          "line-opacity": 1.0,
           "line-width": {
             type: "exponential",
-            base: 1.5,
+            base: 1.61,
             stops: [
               [0, 7 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         var layout = {}; //default
       } else if (this.transporation == "cycling") {
-        shape = "line"
+        shape = "line";
         style = {
           "line-color": color,
-          "line-dasharray": [2,1.25], //[dashes, gaps] measured in units of line-width
-          "line-opacity": 0.8,
+          "line-dasharray": [2, 1.25], //[dashes, gaps] measured in units of line-width
+          "line-opacity": 1.0,
           "line-width": {
             type: "exponential",
-            base: 1.5,
+            base: 1.61,
             stops: [
               [0, 7 * Math.pow(2, 0 - 9)], //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         layout = {}; //default
       } else if (this.transporation == "walking") {
-        shape = "line"
+        shape = "line";
         style = {
           "line-color": color,
-          "line-dasharray": [.1,2], //[dashes, gaps] measured in units of line-width
+          "line-dasharray": [0.1, 2], //[dashes, gaps] measured in units of line-width
           "line-opacity": 0.8,
           "line-width": {
             type: "exponential",
@@ -219,24 +331,52 @@ export default {
               [24, 7 * Math.pow(2, 24 - 18)] //[0, baseWidth * Math.pow(2, (0 - baseZoom))],
             ]
           }
-        }
+        };
         layout = {
-        "line-cap": "round",
-        "line-join": "round"
-      }
+          "line-cap": "round",
+          "line-join": "round"
+        };
       }
 
+      // // Find which label's layer has the smallest z-index, and place the geojson route below that layer
+      // var layers = this.map.getStyle().layers;
+      // // Find the index of the first symbol layer in the map style
+      // var firstSymbolId;
+      // for (var i = layers.length - 1; i >= 0; i--) {
+      //   if (layers[i].type !== "symbol") {
+      //     firstSymbolId = layers[i].id;
+      //     console.log(i, firstSymbolId);
+      //     break;
+      //   }
+      // }
 
-      this.map.addLayer({
-        id: `${routingEngine}RouteID`,
-        type: shape,
-        source: `${routingEngine}RouteSource`,
-        paint: style,
-        layout: layout
-      });
+      this.map.addLayer(
+        {
+          id: `${routingEngine}RouteID`,
+          type: shape,
+          source: `${routingEngine}RouteSource`,
+          paint: style,
+          layout: layout
+        },
+        "admin-0-boundary-disputed"
+      );
+
+      // this.addGeojsonCircles(routingEngine);
     },
-    triggerNewRoute() {
-      this.updateRoute = !this.updateRoute;
+    async triggerNewRoute() {
+      let ghResponse = this.graphhopperRoutePromise();
+      let mpResponse = this.mapboxRoutePromise();
+      let allData = await Promise.all([ghResponse, mpResponse]);
+
+      this.route.mapbox = allData[1].data;
+
+      this.route.graphhopper = allData[0];
+
+      this.compareRoutesUsingTurf()
+      this.displayRoute(this.route.alternatives, "graphhopper");
+      this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox");
+
+      this.zoomToNewRoute();
     },
     async calcGHRoute() {
       let key = this.keys.graphhopper;
@@ -254,42 +394,14 @@ export default {
 
       let url = "http://graphhopper.com/api/1/route?";
 
-      let x = await axios.get(
+      this.map.flyTo({
+        lng: -122.19011309461766,
+        lat: 37.46486343542965
+      });
+
+      await axios.get(
         `${url}key=${key}&point=${points.start.lat},${points.start.lng}&point=${points.end.lat},${points.end.lng}&vehicle=${parameters.vehicle}&locale=${parameters.locale}&calc_points=${parameters.calc_points}&points_encoded=${parameters.points_encoded}`
       );
-      console.log(x.data);
-    },
-    async tester() {
-
-      // ---------------- test fetching mapbox directions ----------
-      // let url = "https://api.mapbox.com/directions/v5";
-      // let modeOfTransporation = "/mapbox/cycling";
-      // let start = "/-122.42,37.78";
-      // let end = "-77.03,38.91";
-      // let key = this.keys.mapbox;
-      // let x = await axios.get(
-      //   `${url}${modeOfTransporation}${start};${end}?access_token=${key}&geometries=geojson`
-      // );
-      // console.log(x.data);
-
-      // ------------- update route trigger --------------------
-      // this.updateRoute = !this.updateRoute;
-
-      // --------------- Test 'capturing' the current location of the yellow marker
-      // try {
-      //   console.log(
-      //     `lat:  ${this.locationMarker.getLngLat().lat}`,
-      //     `long: ${this.locationMarker.getLngLat().lng}`
-      //   );
-      // } catch (error) {
-      //   console.log("no marker on screen");
-      // }
-
-      // ---------- test calling wikipedia data via axios ------------
-      // let url = "https://www.wikidata.org/wiki/Special:EntityData/";
-      // let x = await axios.get(url + "Q74195" + ".json");
-      // console.log("the promise:");
-      // console.log(x.data);
     },
     async fetchWikidata(QID) {
       if (QID) {
@@ -365,16 +477,15 @@ export default {
         .on("dragend", async () => {
           this.mapIsStatic = true;
 
-      if (this.markerList.length >= 2) {
-        this.map.removeLayer("graphhopperRouteID")
-        this.map.removeLayer("mapboxRouteID")
-        this.map.removeSource("graphhopperRouteSource")
-        this.map.removeSource("mapboxRouteSource")
-        this.triggerNewRoute();
-      }
-
-
-
+          if (this.markerList.length >= 2) {
+            this.map.removeLayer("graphhopperRouteID");
+            this.map.removeLayer("mapboxRouteID");
+            // this.map.removeLayer("graphhopperCircleID");
+            // this.map.removeLayer("mapboxCircleID");
+            this.map.removeSource("graphhopperRouteSource");
+            this.map.removeSource("mapboxRouteSource");
+            this.triggerNewRoute();
+          }
         })
         .addTo(this.map);
 
@@ -442,22 +553,24 @@ export default {
           marker.properties.wikiinfo = await this.fetchWikidata(
             marker.properties.wikidata
           );
-          this.addAppleMarker(marker);
-          if (this.markerList.length == 1) {
-            this.flyToFirstMarker(marker);
-          }
+        }
+        this.addAppleMarker(marker);
+        if (this.markerList.length == 1) {
+          this.flyToFirstMarker(marker);
+        }
+        if (this.markerList.length >= 2) {
           this.removeCurrentRoute();
           this.triggerNewRoute();
         }
       });
     },
-    calculateGraphhopperRoute() {
+    graphhopperRoutePromise() {
       if (this.transporation == "driving") {
-        var mode = "car"
+        var mode = "car";
       } else if (this.transporation == "cycling") {
-        mode = "bike"
+        mode = "bike";
       } else if (this.transporation == "walking") {
-        mode = "foot"
+        mode = "foot";
       }
 
       let defaults = {
@@ -474,32 +587,8 @@ export default {
           ghRouting.addPoint(new GHInput(e.getLngLat().lat, e.getLngLat().lng));
         });
 
-        ghRouting
-          .doRequest()
-          .then(json => {
-            this.route.graphhopper = json;
-            this.displayRoute(this.route.graphhopper.paths[0].points, "graphhopper");
-            this.zoomToNewRoute();
-
-            // this.$emit(
-            //   "childDisplayRoute",
-            //   val.id,
-            //   val.source,
-            //   jsonParsed.paths[0].points
-            // );
-          })
-          .catch(err => {
-            alert("uh oh spaghettios! Graphhopper errored out");
-            console.error(err.message);
-          });
+        return ghRouting.doRequest();
       }
-    }
-  },
-
-  watch: {
-    updateRoute() {
-      this.calculateGraphhopperRoute();
-      this.calculateMapboxRoute();
     }
   }
 };
