@@ -89,19 +89,19 @@ export default {
     };
   },
   methods: {
-    addGeojsonCircles(routingEngine) {
-      let circleColor = routingEngine == "graphhopper" ? "brown" : "orange";
+    // addGeojsonCircles(routingEngine) {
+    //   let circleColor = routingEngine == "graphhopper" ? "brown" : "orange";
 
-      this.map.addLayer({
-        id: `${routingEngine}CircleID`,
-        type: "circle",
-        source: `${routingEngine}RouteSource`,
-        paint: {
-          "circle-radius": 5,
-          "circle-color": circleColor
-        }
-      });
-    },
+    //   this.map.addLayer({
+    //     id: `${routingEngine}CircleID`,
+    //     type: "circle",
+    //     source: `${routingEngine}RouteSource`,
+    //     paint: {
+    //       "circle-radius": 5,
+    //       "circle-color": circleColor
+    //     }
+    //   });
+    // },
     compareRoutesUsingTurf() {
       //Using the Map Maching Mapbox API -- Only 100 Coordinates Per Request -- https://docs.mapbox.com/api/overview/
       let gh = this.route.graphhopper.paths[0].points.coordinates;
@@ -145,7 +145,7 @@ export default {
           // detourSegment.push(snappedPoint.geometry.coordinates);
 
           detourSegment.push(element);
-          detourSegment.push(gh[index + 1]);
+          // detourSegment.push(gh[index + 1]);
 
           this.route.alternatives.features[counter] = {
             type: "Feature",
@@ -170,8 +170,8 @@ export default {
       });
     },
     clearMap() {
-      this.map.removeLayer("graphhopperCircleID");
-      this.map.removeLayer("mapboxCircleID");
+      // this.map.removeLayer("graphhopperCircleID");
+      // this.map.removeLayer("mapboxCircleID");
       this.map.removeLayer("graphhopperRouteID");
       this.map.removeLayer("mapboxRouteID");
       this.map.removeSource("graphhopperRouteSource");
@@ -181,9 +181,7 @@ export default {
       //only trigger behavior if someone is clicking a different transportion type than what is currently selected
       if (this.transporation != type) {
         this.transporation = type;
-        if (this.markerList.length == 2) {
-          this.clearMap();
-        } else if (this.markerList.length >= 2) {
+        if (this.markerList.length >= 2) {
           this.clearMap();
           this.triggerNewRoute();
         }
@@ -254,12 +252,12 @@ export default {
     removeCurrentRoute() {
       if (this.map.getSource("graphhopperRouteSource")) {
         this.map.removeLayer("graphhopperRouteID");
-        this.map.removeLayer("graphhopperCircleID");
+        // this.map.removeLayer("graphhopperCircleID");
         this.map.removeSource("graphhopperRouteSource");
       }
       if (this.map.getSource("mapboxRouteSource")) {
         this.map.removeLayer("mapboxRouteID");
-        this.map.removeLayer("mapboxCircleID");
+        // this.map.removeLayer("mapboxCircleID");
         this.map.removeSource("mapboxRouteSource");
       }
     },
@@ -360,7 +358,7 @@ export default {
         "admin-0-boundary-disputed"
       );
 
-      this.addGeojsonCircles(routingEngine);
+      // this.addGeojsonCircles(routingEngine);
     },
     async triggerNewRoute() {
       let ghResponse = this.graphhopperRoutePromise();
@@ -479,8 +477,8 @@ export default {
           if (this.markerList.length >= 2) {
             this.map.removeLayer("graphhopperRouteID");
             this.map.removeLayer("mapboxRouteID");
-            this.map.removeLayer("graphhopperCircleID");
-            this.map.removeLayer("mapboxCircleID");
+            // this.map.removeLayer("graphhopperCircleID");
+            // this.map.removeLayer("mapboxCircleID");
             this.map.removeSource("graphhopperRouteSource");
             this.map.removeSource("mapboxRouteSource");
             this.triggerNewRoute();
