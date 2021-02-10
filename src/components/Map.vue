@@ -1,12 +1,6 @@
 <template>
   <div>
     <div id="myMap"></div>
-<<<<<<< HEAD
-=======
-    <!-- <button id="testButton" @click="tester">
-      <h4>Run Test</h4>
-    </button> -->
->>>>>>> compare-routes
     <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
