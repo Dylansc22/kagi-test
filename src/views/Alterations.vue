@@ -1,6 +1,6 @@
 <template>
   <div>
-    <img id="inspo" src="../../public/inspo.png" alt="Inspiration Apple Map" />
+    <!-- <img id="inspo" src="../../public/inspo.png" alt="Inspiration Apple Map" /> -->
     <div id="comparison-container">
       <div id="before" class="map"></div>
       <div id="after" class="map"></div>
