@@ -31,7 +31,7 @@ export default {
         "pk.eyJ1IjoiZHlsYW5jIiwiYSI6Im53UGgtaVEifQ.RJiPqXwEtCLTLl-Vmd1GWQ";
       var before = new mapboxgl.Map({
         container: "before",
-        style: "mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
+        style: "mapbox://styles/dylanc/ckl8wm31u0ao118m4n92vf13g", //"mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
 
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
