@@ -28,10 +28,10 @@ export default {
       var start = [-122.2646, 37.4956];
 
       mapboxgl.accessToken =
-        "pk.eyJ1IjoiZHlsYW5jIiwiYSI6Im53UGgtaVEifQ.RJiPqXwEtCLTLl-Vmd1GWQ";
+        "pk.eyJ1IjoidnByZWxvdmFjIiwiYSI6ImNqYzlqZjZjdDAwMXEyenJ1eDA0ZjJnanAifQ.HfZmaH2OvqcECAIi87A4Vg";
       var before = new mapboxgl.Map({
         container: "before",
-        style: "mapbox://styles/dylanc/cklo3xqaw0qtz17k05syji997", //"mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
+        style: "mapbox://styles/dylanc/ckl8wm31u0ao118m4n92vf13g", //"mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
 
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
@@ -44,7 +44,7 @@ export default {
 
       var after = new mapboxgl.Map({
         container: "after",
-        style: "mapbox://styles/dylanc/ckl8wm31u0ao118m4n92vf13g",
+        style: "mapbox://styles/vprelovac/cklql84i33t4b17qh1rujazpg",
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
         pitch: 15,
@@ -60,6 +60,15 @@ export default {
         // mousemove: true, // Optional. Set to true to enable swiping during cursor movement.
         orientation: "vertical" // Optional. Sets the orientation of swiper to horizontal or vertical, defaults to vertical
       });
+
+      // Add zoom and rotation controls to the map.
+      var nav = new mapboxgl.NavigationControl({
+        showCompass: true,
+        showZoom: true,
+        visualizePitch: false
+      });
+
+      after.addControl(nav, "top-right"); //adds map-navigation controller
     }
   }
 };

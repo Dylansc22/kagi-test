@@ -185,18 +185,16 @@ export default {
       }
     },
     undoLastMarker() {
-       if (this.markerList.length > 2) {
+      if (this.markerList.length > 2) {
         this.clearMap();
         this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
         this.triggerNewRoute();
-      }
-      else if (this.markerList.length == 2) {
+      } else if (this.markerList.length == 2) {
         this.clearMap();
         this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
-      }
-      else if (this.markerList.length == 1) {
+      } else if (this.markerList.length == 1) {
         this.markerList[this.markerList.length - 1].remove();
         this.markerList.pop();
       }
@@ -259,13 +257,12 @@ export default {
       }
     },
     displayRoute(myData, routingEngine) {
-      
       if (routingEngine == "graphhopper") {
         this.map.addSource(`${routingEngine}RouteSource`, {
           type: "geojson",
           data: myData
         });
-      } 
+      }
       //Mapbox Route
       else {
         this.map.addSource(`${routingEngine}RouteSource`, {
@@ -366,7 +363,7 @@ export default {
 
       this.route.graphhopper = allData[0];
 
-      this.compareRoutesUsingTurf()
+      this.compareRoutesUsingTurf();
       this.displayRoute(this.route.alternatives, "graphhopper");
       this.displayRoute(this.route.mapbox.routes[0].geometry, "mapbox");
 
@@ -513,7 +510,7 @@ export default {
       mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API;
       this.map = new mapboxgl.Map({
         container: "myMap", // container id
-        style: "mapbox://styles/dylanc/ckl8wm31u0ao118m4n92vf13g",//"mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
+        style: "mapbox://styles/vprelovac/cklql84i33t4b17qh1rujazpg", //"mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
         center: [-122.2646, 37.4956], // starting position [lng, lat]
         zoom: 11, // starting zoom
         minZoom: 3,
@@ -528,6 +525,15 @@ export default {
         flyTo: false //I only need the map to zoom to the first marker the first time (ie if markerList.length is == 1). if there is more than 1 marker, than it will zoom to the generated route via zoomToNewRoute()
       });
       this.map.addControl(geocoder, "top-left");
+
+      // Add zoom and rotation controls to the map.
+      var nav = new mapboxgl.NavigationControl({
+        showCompass: true,
+        showZoom: true,
+        visualizePitch: false
+      });
+
+      this.map.addControl(nav, "top-right"); //adds map-navigation controller
 
       this.map.on("move", () => {
         this.mapIsStatic = false;
