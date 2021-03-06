@@ -510,7 +510,7 @@ export default {
       mapboxgl.accessToken = process.env.VUE_APP_MAPBOX_API;
       this.map = new mapboxgl.Map({
         container: "myMap", // container id
-        style: "mapbox://styles/vprelovac/cklql84i33t4b17qh1rujazpg", //"mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
+        style: "mapbox://styles/vprelovac/cklyc5k0z3vxf17po9xna1cg3", //"mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
         center: [-122.2646, 37.4956], // starting position [lng, lat]
         zoom: 11, // starting zoom
         minZoom: 3,

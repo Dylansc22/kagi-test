@@ -44,7 +44,7 @@ export default {
 
       var after = new mapboxgl.Map({
         container: "after",
-        style: "mapbox://styles/vprelovac/cklql84i33t4b17qh1rujazpg",
+        style: "mapbox://styles/vprelovac/cklyc5k0z3vxf17po9xna1cg3",
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
         pitch: 15,
