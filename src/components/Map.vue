@@ -1,6 +1,7 @@
 <template>
   <div>
     <div id="myMap"></div>
+    <div id="myZoom">zoom: {{ roundedZoom }}</div>
     <div id="controller" :class="{ active: markerList.length >= 2 }">
       <div id="controls">
         <button
@@ -71,6 +72,7 @@ export default {
       mapIsStatic: true,
       isActive: true,
       map: null,
+      currentZoom: 11,
       markerList: [],
       counter: 0,
       keys: {
@@ -512,7 +514,7 @@ export default {
         container: "myMap", // container id
         style: "mapbox://styles/vprelovac/cklyc5k0z3vxf17po9xna1cg3", //"mapbox://styles/dylanc/ckknn6k240hmz17pccv0pun4w", // style URL
         center: [-122.2646, 37.4956], // starting position [lng, lat]
-        zoom: 11, // starting zoom
+        zoom: this.currentZoom, // starting zoom
         minZoom: 3,
         maxPitch: 60
       });
@@ -541,6 +543,7 @@ export default {
 
       this.map.on("moveend", () => {
         this.mapIsStatic = true;
+        this.currentZoom = this.map.getZoom();
       });
 
       //*** */
@@ -589,6 +592,11 @@ export default {
 
         return ghRouting.doRequest();
       }
+    }
+  },
+  computed: {
+    roundedZoom() {
+      return Math.round(this.currentZoom * 100) / 100;
     }
   }
 };
@@ -761,5 +769,11 @@ export default {
   bottom: 0;
   width: 100%;
   background-color: #ade1f5;
+}
+
+#myZoom {
+  position: absolute;
+  bottom: 35px;
+  left: 10px;
 }
 </style>
