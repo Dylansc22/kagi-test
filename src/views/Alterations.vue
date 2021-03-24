@@ -31,7 +31,7 @@ export default {
         "pk.eyJ1IjoidnByZWxvdmFjIiwiYSI6ImNqYzlqZjZjdDAwMXEyenJ1eDA0ZjJnanAifQ.HfZmaH2OvqcECAIi87A4Vg";
       var before = new mapboxgl.Map({
         container: "before",
-        style: "mapbox://styles/vprelovac/ckmeq7ulqgup117qsnjguak82", //"mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
+        style: "mapbox://styles/vprelovac/ckmnvohf5116v17nnxp2s9k51", //"mapbox://styles/dylanc/ckkrw6u900mbb18nzkfntn0t6",
 
         center: start /*[-110.93475, 32.22396],*/,
         zoom: 10,
