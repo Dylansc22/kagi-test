@@ -516,7 +516,8 @@ export default {
         center: [-122.2646, 37.4956], // starting position [lng, lat]
         zoom: this.currentZoom, // starting zoom
         minZoom: 3,
-        maxPitch: 60
+        maxPitch: 60,
+        hash: true
       });
 
       //Add geocoder

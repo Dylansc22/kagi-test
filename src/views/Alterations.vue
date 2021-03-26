@@ -37,6 +37,7 @@ export default {
         zoom: 10,
         pitch: 15,
         bearing: 5,
+        hash: true,
         // minZoom:12,
         attributionControl: false
         /*interactive: false,*/
